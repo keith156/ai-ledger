@@ -1,7 +1,5 @@
-
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
-// Import process from node:process to ensure Node.js types are used instead of browser types
 import process from 'node:process';
 
 export default defineConfig(({ mode }) => {
@@ -10,7 +8,10 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [react()],
     define: {
+      // Direct replacement for the specific env var used by the Gemini SDK
       'process.env.API_KEY': JSON.stringify(env.API_KEY || ""),
+      // Polyfill process.env to prevent crashes if other libs check it
+      'process.env': JSON.stringify(env),
     }
   };
 });

@@ -1,15 +1,15 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { ParseResult, TransactionType } from "../types";
 
-// The GenAI client is initialized following strict guidelines.
-// Always use new GoogleGenAI({ apiKey: process.env.API_KEY })
+// The GenAI client is initialized using the required named parameter pattern.
+// process.env.API_KEY is replaced at build time by Vite.
 const getAI = () => {
-  if (!process.env.API_KEY) {
-    console.warn("Kazi Ledger: API_KEY is missing. AI features will be disabled.");
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    console.warn("Kazi Ledger: API_KEY is missing. AI features will not work.");
     return null;
   }
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+  return new GoogleGenAI({ apiKey });
 };
 
 export const parseInputText = async (text: string): Promise<ParseResult> => {
@@ -36,7 +36,6 @@ export const parseInputText = async (text: string): Promise<ParseResult> => {
       RESPONSE FORMAT: Valid JSON only.
     `;
 
-    // Using ai.models.generateContent as per guidelines with defined model and contents.
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: text,
@@ -48,7 +47,7 @@ export const parseInputText = async (text: string): Promise<ParseResult> => {
           properties: {
             intent: { 
               type: Type.STRING, 
-              description: "The user's intent: 'RECORD' for transactions, 'QUERY' for reports/history, or 'UNKNOWN'."
+              description: "The user's intent: 'RECORD', 'QUERY', or 'UNKNOWN'."
             },
             type: { 
               type: Type.STRING, 
@@ -64,7 +63,7 @@ export const parseInputText = async (text: string): Promise<ParseResult> => {
             },
             counterparty: { 
               type: Type.STRING, 
-              description: "The name of the person involved (Musa, John, etc.) if applicable."
+              description: "The name of the person involved."
             },
             queryRange: { 
               type: Type.STRING, 
@@ -77,7 +76,6 @@ export const parseInputText = async (text: string): Promise<ParseResult> => {
       }
     });
 
-    // Accessing response text directly via the .text property (not a method).
     const parsed = JSON.parse(response.text || "{}");
     return { ...parsed, rawText: text };
   } catch (error) {
@@ -92,20 +90,16 @@ export const parseReceiptImage = async (base64Data: string, mimeType: string): P
     if (!ai) return { intent: 'UNKNOWN', rawText: "AI service unavailable" };
     
     const systemInstruction = `
-      Analyze the image of this receipt or invoice and extract:
-      1. Total Amount
-      2. Category (Stock, Rent, Fuel, Food, Salaries, etc.)
-      3. Counterparty (The Merchant or Store Name)
-      Default to EXPENSE.
+      Analyze the image of this receipt or invoice and extract details for a business ledger.
+      Default to EXPENSE unless it is clearly a sales receipt.
     `;
 
-    // Multimodal input using the parts array in contents.
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: {
         parts: [
           { inlineData: { data: base64Data, mimeType } },
-          { text: "Extract receipt details." }
+          { text: "Extract receipt details: type, amount, category, counterparty." }
         ]
       },
       config: {
@@ -114,22 +108,10 @@ export const parseReceiptImage = async (base64Data: string, mimeType: string): P
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            type: { 
-              type: Type.STRING,
-              description: "Usually 'EXPENSE' for scanned receipts."
-            },
-            amount: { 
-              type: Type.NUMBER,
-              description: "The total numerical amount on the document."
-            },
-            category: { 
-              type: Type.STRING,
-              description: "Category of business spend."
-            },
-            counterparty: { 
-              type: Type.STRING,
-              description: "The store or merchant name."
-            }
+            type: { type: Type.STRING },
+            amount: { type: Type.NUMBER },
+            category: { type: Type.STRING },
+            counterparty: { type: Type.STRING }
           },
           required: ["type", "amount", "category"],
           propertyOrdering: ["type", "amount", "category", "counterparty"]
@@ -137,7 +119,6 @@ export const parseReceiptImage = async (base64Data: string, mimeType: string): P
       }
     });
 
-    // Accessing response text directly via the .text property.
     const parsed = JSON.parse(response.text || "{}");
     return { 
       intent: 'RECORD', 
