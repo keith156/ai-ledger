@@ -1,21 +1,19 @@
+
 import { GoogleGenAI, Type } from "@google/genai";
 import { ParseResult, TransactionType } from "../types";
 
-// The GenAI client is initialized using the required named parameter pattern.
-// process.env.API_KEY is replaced at build time by Vite.
+/**
+ * Note: process.env.API_KEY is replaced at build time by Vite's 'define' config.
+ * We initialize inside the function to ensure the latest value is used.
+ */
 const getAI = () => {
-  const apiKey = process.env.API_KEY;
-  if (!apiKey) {
-    console.warn("Kazi Ledger: API_KEY is missing. AI features will not work.");
-    return null;
-  }
-  return new GoogleGenAI({ apiKey });
+  // Directly use process.env.API_KEY as required.
+  return new GoogleGenAI({ apiKey: process.env.API_KEY as string });
 };
 
 export const parseInputText = async (text: string): Promise<ParseResult> => {
   try {
     const ai = getAI();
-    if (!ai) return { intent: 'UNKNOWN', rawText: text };
     
     const systemInstruction = `
       You are an intelligent ledger assistant for small business owners.
@@ -87,7 +85,6 @@ export const parseInputText = async (text: string): Promise<ParseResult> => {
 export const parseReceiptImage = async (base64Data: string, mimeType: string): Promise<ParseResult> => {
   try {
     const ai = getAI();
-    if (!ai) return { intent: 'UNKNOWN', rawText: "AI service unavailable" };
     
     const systemInstruction = `
       Analyze the image of this receipt or invoice and extract details for a business ledger.
