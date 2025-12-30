@@ -1,0 +1,8 @@
+{
+  "name": "Kazi Ledger",
+  "description": "A simple, text-based accounting tool for small businesses in emerging markets. Track income, expenses, and debts using natural language.",
+  "requestFramePermissions": [
+    "microphone",
+    "camera"
+  ]
+}
