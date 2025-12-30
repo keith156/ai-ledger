@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Transaction, TransactionType } from '../types';
 import { Icons, COLORS } from '../constants';
@@ -19,22 +18,22 @@ export const TransactionCard: React.FC<TransactionCardProps> = ({ transaction, o
   });
 
   return (
-    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between mb-2">
-      <div className="flex items-center gap-3">
-        <div className={`p-2 rounded-full ${isIncome ? 'bg-emerald-50 text-emerald-600' : isDebt ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'}`}>
+    <div className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 flex items-center justify-between mb-2 w-full max-w-full overflow-hidden">
+      <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className={`p-2 rounded-full flex-shrink-0 ${isIncome ? 'bg-emerald-50 text-emerald-600' : isDebt ? 'bg-amber-50 text-amber-600' : 'bg-rose-50 text-rose-600'}`}>
           {isIncome ? <Icons.ArrowUp /> : isDebt ? <Icons.Users /> : <Icons.ArrowDown />}
         </div>
-        <div>
-          <h4 className="font-semibold text-slate-800 capitalize">
+        <div className="min-w-0 flex-1">
+          <h4 className="font-semibold text-slate-800 capitalize truncate">
             {transaction.counterparty ? `${transaction.counterparty}` : transaction.category}
           </h4>
-          <p className="text-xs text-slate-400 font-medium">
+          <p className="text-[10px] text-slate-400 font-medium truncate">
             {transaction.category} • {formattedDate}
           </p>
         </div>
       </div>
-      <div className="text-right">
-        <span className={`font-bold text-lg ${isIncome ? COLORS.income : isDebt ? COLORS.debt : COLORS.expense}`}>
+      <div className="text-right flex-shrink-0 pl-2">
+        <span className={`font-bold text-base whitespace-nowrap ${isIncome ? COLORS.income : isDebt ? COLORS.debt : COLORS.expense}`}>
           {isIncome ? '+' : '-'}{formattedAmount}
         </span>
       </div>
