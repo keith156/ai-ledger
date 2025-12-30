@@ -3,41 +3,47 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0, viewport-fit=cover">
-    <title>Kazi Ledger - Business Accounting Simplified</title>
+    <title>Kazi Ledger - Real-time Business Tracking</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <style>
-        :root {
-          --app-max-width: 32rem; /* lg */
+        * {
+          -webkit-tap-highlight-color: transparent;
+          box-sizing: border-box;
         }
         body { 
           font-family: 'Inter', sans-serif; 
           background-color: #f8fafc; 
-          overflow-x: hidden;
-          width: 100vw;
           margin: 0;
           padding: 0;
+          width: 100%;
+          min-height: 100%;
+          overflow-x: hidden;
           -webkit-text-size-adjust: 100%;
           touch-action: manipulation;
         }
-        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         #root { 
-          min-height: 100vh; 
-          display: flex; 
-          flex-direction: column; 
+          min-height: 100vh;
+          display: flex;
+          flex-direction: column;
           width: 100%;
-          overflow-x: hidden;
         }
-        /* Hide scrollbars for a cleaner mobile feel */
+        .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
         
         /* Force 16px to prevent iOS auto-zoom */
         input, textarea, select, button {
           font-size: 16px !important;
-          appearance: none;
+        }
+        /* Fix for potential horizontal scrolling on some mobile browsers */
+        .w-screen-max {
+          width: 100%;
+          max-width: 100vw;
+          overflow-x: hidden;
         }
     </style>
 <script type="importmap">
