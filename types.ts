@@ -21,6 +21,7 @@ export interface User {
   email: string;
   businessName: string;
   currency: string;
+  picture?: string;
 }
 
 export interface ParseResult {
