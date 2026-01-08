@@ -44,17 +44,25 @@ const App: React.FC = () => {
   // Handle Supabase Auth Changes
   useEffect(() => {
     const initAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await loadUserData(session.user.id, session.user.email!);
-      } else {
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        if (error) throw error;
+        
+        if (session) {
+          await loadUserData(session.user.id, session.user.email!);
+        } else {
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
+      } catch (err: any) {
+        console.error("Auth initialization failed:", err);
+        setAuthError("Connection error. Please check your internet or Supabase settings.");
         setState(prev => ({ ...prev, isLoading: false }));
       }
     };
 
     initAuth();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session) {
         await loadUserData(session.user.id, session.user.email!);
       } else {
@@ -69,23 +77,27 @@ const App: React.FC = () => {
     setIsSyncing(true);
     try {
       const profile = await getUserProfile(userId);
+      const txs = await getStoredTransactions(userId);
+      
       if (profile) {
-        const txs = await getStoredTransactions(userId);
         setState({ 
           user: { ...profile, email: userEmail }, 
           transactions: txs, 
           isLoading: false 
         });
       } else {
-        // User authenticated but no profile yet (e.g., just signed up or DB delay)
+        // Fallback for missing profile
         setState(prev => ({ 
           ...prev, 
-          user: prev.user || { id: userId, email: userEmail, businessName: '', currency: 'UGX' }, 
+          user: { id: userId, email: userEmail, businessName: 'My Business', currency: 'UGX' }, 
+          transactions: txs,
           isLoading: false 
         }));
       }
     } catch (error) {
       console.error("Data load error:", error);
+      // Ensure we stop loading even on failure
+      setState(prev => ({ ...prev, isLoading: false }));
     } finally {
       setIsSyncing(false);
     }
@@ -111,7 +123,6 @@ const App: React.FC = () => {
             businessName: businessNameInput,
             currency: 'UGX'
           };
-          // Immediately save profile so the next session check finds it
           await saveUserProfile(newUser);
           setState(prev => ({ ...prev, user: newUser }));
         }
@@ -130,15 +141,19 @@ const App: React.FC = () => {
     if (!textToParse.trim()) return;
     
     setParsing(true);
-    const result = await parseInputText(textToParse);
-    setParsing(false);
-    
-    if (result.intent === 'RECORD') {
-      setPendingConfirm(result);
-      setActiveTab('record');
-    } else if (result.intent === 'QUERY') {
-      if (result.queryRange) setActiveTab('history');
-      setInputText('');
+    try {
+      const result = await parseInputText(textToParse);
+      if (result.intent === 'RECORD') {
+        setPendingConfirm(result);
+        setActiveTab('record');
+      } else if (result.intent === 'QUERY') {
+        if (result.queryRange) setActiveTab('history');
+        setInputText('');
+      }
+    } catch (err) {
+      console.error("AI Error:", err);
+    } finally {
+      setParsing(false);
     }
   };
 
@@ -162,7 +177,7 @@ const App: React.FC = () => {
       setInputText('');
       setActiveTab('dashboard');
     } catch (err: any) {
-      alert("Error saving to cloud: " + err.message);
+      alert("Error saving: " + err.message);
     } finally {
       setIsSyncing(false);
     }
@@ -224,7 +239,6 @@ const App: React.FC = () => {
     </div>
   );
 
-  // Show login/signup if no user or if we are in signup mode and missing business name
   if (!state.user || (isSignUp && !state.user.businessName)) {
     return (
       <div className="min-h-screen bg-white flex flex-col items-center justify-center p-8 w-full safe-top safe-bottom">
@@ -371,7 +385,7 @@ const App: React.FC = () => {
                 <button onClick={logoutUser} className="w-full px-8 py-6 text-left hover:bg-rose-50 text-rose-600 font-black active:bg-rose-100 transition-colors">Log Out</button>
               </div>
               <div className="text-center p-6 bg-slate-900 rounded-[2.5rem] text-white">
-                <p className="text-[11px] font-bold uppercase tracking-widest mb-2">Security: Supabase 2FA</p>
+                <p className="text-[11px] font-bold uppercase tracking-widest mb-2">Security: Supabase Protected</p>
                 <p className="text-xs text-slate-400 leading-relaxed">Your business data is encrypted and synced across all your devices using enterprise-grade cloud security.</p>
               </div>
            </div>
