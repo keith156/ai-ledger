@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from './services/supabase';
 import { 
@@ -41,17 +40,16 @@ const App: React.FC = () => {
   const [businessNameInput, setBusinessNameInput] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
 
-  // Handle Supabase Auth Changes
   useEffect(() => {
     let isMounted = true;
 
     const initAuth = async () => {
-      // Safety timeout: If auth check takes longer than 5 seconds, stop loading
+      // Safety timeout: If auth check takes longer than 3 seconds, assume no session
       const timeout = setTimeout(() => {
         if (isMounted && state.isLoading) {
           setState(prev => ({ ...prev, isLoading: false }));
         }
-      }, 5000);
+      }, 3000);
 
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
@@ -69,7 +67,6 @@ const App: React.FC = () => {
       } catch (err: any) {
         console.error("Auth initialization failed:", err);
         if (isMounted) {
-          setAuthError("Failed to connect to the server. Please refresh.");
           setState(prev => ({ ...prev, isLoading: false }));
         }
       }
@@ -327,14 +324,14 @@ const App: React.FC = () => {
             )}
             <div className="min-w-0">
               <div className="flex items-center gap-2">
-                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none truncate">{state.user.businessName || 'Business'}</p>
+                <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest leading-none truncate">{state.user?.businessName || 'Business'}</p>
                 {isSyncing && <div className="w-1.5 h-1.5 bg-blue-500 rounded-full animate-pulse" />}
               </div>
               <h2 className="text-xl font-black text-slate-900 leading-none truncate capitalize">{activeTab}</h2>
             </div>
           </div>
           <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center text-white font-black text-sm shadow-lg">
-            {(state.user.businessName || 'K')[0].toUpperCase()}
+            {(state.user?.businessName || 'K')[0].toUpperCase()}
           </div>
         </div>
       </header>
