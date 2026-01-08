@@ -43,34 +43,54 @@ const App: React.FC = () => {
 
   // Handle Supabase Auth Changes
   useEffect(() => {
+    let isMounted = true;
+
     const initAuth = async () => {
+      // Safety timeout: If auth check takes longer than 5 seconds, stop loading
+      const timeout = setTimeout(() => {
+        if (isMounted && state.isLoading) {
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
+      }, 5000);
+
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
+        clearTimeout(timeout);
+        
         if (error) throw error;
         
-        if (session) {
-          await loadUserData(session.user.id, session.user.email!);
-        } else {
-          setState(prev => ({ ...prev, isLoading: false }));
+        if (isMounted) {
+          if (session) {
+            await loadUserData(session.user.id, session.user.email!);
+          } else {
+            setState(prev => ({ ...prev, isLoading: false }));
+          }
         }
       } catch (err: any) {
         console.error("Auth initialization failed:", err);
-        setAuthError("Connection error. Please check your internet or Supabase settings.");
-        setState(prev => ({ ...prev, isLoading: false }));
+        if (isMounted) {
+          setAuthError("Failed to connect to the server. Please refresh.");
+          setState(prev => ({ ...prev, isLoading: false }));
+        }
       }
     };
 
     initAuth();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session) {
-        await loadUserData(session.user.id, session.user.email!);
-      } else {
-        setState({ user: null, transactions: [], isLoading: false });
+      if (isMounted) {
+        if (session) {
+          await loadUserData(session.user.id, session.user.email!);
+        } else {
+          setState({ user: null, transactions: [], isLoading: false });
+        }
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const loadUserData = async (userId: string, userEmail: string) => {
@@ -79,24 +99,13 @@ const App: React.FC = () => {
       const profile = await getUserProfile(userId);
       const txs = await getStoredTransactions(userId);
       
-      if (profile) {
-        setState({ 
-          user: { ...profile, email: userEmail }, 
-          transactions: txs, 
-          isLoading: false 
-        });
-      } else {
-        // Fallback for missing profile
-        setState(prev => ({ 
-          ...prev, 
-          user: { id: userId, email: userEmail, businessName: 'My Business', currency: 'UGX' }, 
-          transactions: txs,
-          isLoading: false 
-        }));
-      }
+      setState({ 
+        user: profile ? { ...profile, email: userEmail } : { id: userId, email: userEmail, businessName: 'My Business', currency: 'UGX' }, 
+        transactions: txs || [], 
+        isLoading: false 
+      });
     } catch (error) {
       console.error("Data load error:", error);
-      // Ensure we stop loading even on failure
       setState(prev => ({ ...prev, isLoading: false }));
     } finally {
       setIsSyncing(false);
@@ -124,7 +133,7 @@ const App: React.FC = () => {
             currency: 'UGX'
           };
           await saveUserProfile(newUser);
-          setState(prev => ({ ...prev, user: newUser }));
+          setState(prev => ({ ...prev, user: newUser, isLoading: false }));
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -380,8 +389,8 @@ const App: React.FC = () => {
            <div className="space-y-8 animate-fade-in">
               <h3 className="text-lg font-black text-slate-900">Account Control</h3>
               <div className="bg-white rounded-[2.5rem] border border-slate-100 divide-y divide-slate-50 overflow-hidden shadow-sm">
-                <div className="px-8 py-6 flex justify-between items-center"><span className="font-bold text-slate-600">Currency</span><span className="text-slate-900 font-black tracking-tight">{state.user.currency}</span></div>
-                <div className="px-8 py-6 flex flex-col"><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">User Email</span><span className="font-bold text-slate-900 truncate">{state.user.email}</span></div>
+                <div className="px-8 py-6 flex justify-between items-center"><span className="font-bold text-slate-600">Currency</span><span className="text-slate-900 font-black tracking-tight">{state.user?.currency}</span></div>
+                <div className="px-8 py-6 flex flex-col"><span className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">User Email</span><span className="font-bold text-slate-900 truncate">{state.user?.email}</span></div>
                 <button onClick={logoutUser} className="w-full px-8 py-6 text-left hover:bg-rose-50 text-rose-600 font-black active:bg-rose-100 transition-colors">Log Out</button>
               </div>
               <div className="text-center p-6 bg-slate-900 rounded-[2.5rem] text-white">
@@ -458,7 +467,7 @@ const App: React.FC = () => {
              <div className="bg-slate-900 text-white p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full -mr-10 -mt-10" />
                 <p className="text-slate-400 text-xs font-black uppercase tracking-widest mb-2">Net Cash Position</p>
-                <h4 className={`text-5xl font-black ${reportData.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{state.user.currency} {new Intl.NumberFormat().format(reportData.net)}</h4>
+                <h4 className={`text-5xl font-black ${reportData.net >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>{state.user?.currency} {new Intl.NumberFormat().format(reportData.net)}</h4>
                 <div className="grid grid-cols-2 gap-8 border-t border-slate-800 pt-8 mt-10">
                    <div><p className="text-slate-500 text-[10px] font-black uppercase mb-1">Total Inflow</p><p className="text-emerald-400 font-black text-xl">{new Intl.NumberFormat().format(reportData.totalIn)}</p></div>
                    <div><p className="text-slate-500 text-[10px] font-black uppercase mb-1">Total Outflow</p><p className="text-rose-400 font-black text-xl">{new Intl.NumberFormat().format(reportData.totalOut)}</p></div>
